@@ -1,0 +1,28 @@
+apply plugin: 'groovy'
+
+repositories {
+  jcenter()
+}
+
+ext.flumeVersion = '1.5.2'
+
+// In this section you declare the dependencies for your production and test code
+dependencies {
+  compile 'org.codehaus.groovy:groovy-all:2.4.0:indy'
+
+  compile 'org.slf4j:slf4j-api:1.7.7'
+  compile 'ch.qos.logback:logback-classic:1.1.2'
+  compile 'net.sourceforge.argparse4j:argparse4j:0.4.4'
+  compile "org.apache.flume:flume-ng-sdk:$flumeVersion"
+  compile 'com.google.guava:guava:18.0'
+  compile 'io.dropwizard:dropwizard-util:0.7.1'
+  compile 'io.dropwizard.metrics:metrics-core:3.1.0'
+
+  testCompile 'junit:junit:4.11'
+  testCompile 'org.spockframework:spock-core:0.7-groovy-2.0'
+}
+
+tasks.withType(GroovyCompile) {
+  groovyOptions.optimizationOptions.indy = true
+}
+
