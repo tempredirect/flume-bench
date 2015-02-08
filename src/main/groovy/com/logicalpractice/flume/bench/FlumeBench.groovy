@@ -4,6 +4,7 @@ import ch.qos.logback.classic.BasicConfigurator
 import ch.qos.logback.classic.Level
 import com.codahale.metrics.ConsoleReporter
 import com.codahale.metrics.MetricRegistry
+import com.google.common.net.HostAndPort
 import io.dropwizard.util.Duration
 import net.sourceforge.argparse4j.ArgumentParsers
 import net.sourceforge.argparse4j.inf.Argument
@@ -44,6 +45,7 @@ class FlumeBench {
 
     parser.addArgument("host")
         .setDefault('localhost:8001')
+        .type(hostAndPortType())
 
     Subparser maxThroughput = parser.addSubparsers().addParser("max-throughput")
     maxThroughput
@@ -53,6 +55,8 @@ class FlumeBench {
     Namespace ns = parser.parseArgsOrFail(args)
 
     FlumeClient client = serviceLoader.iterator().find { it.name == ns.getString("client") } as FlumeClient
+    client.initialise(ns.get("host") as HostAndPort, [:])
+
     MetricRegistry metrics = new MetricRegistry()
     MetricRecordingClient metricRecordingClient = new MetricRecordingClient(client, metrics)
 
@@ -80,6 +84,10 @@ class FlumeBench {
 
   private static ArgumentType<Duration> durationType() {
     {ArgumentParser p, Argument arg, String value -> Duration.parse(value)}
+  }
+
+  private static ArgumentType<HostAndPort> hostAndPortType() {
+    {ArgumentParser p, Argument arg, String value -> HostAndPort.fromString(value)}
   }
 
 }
