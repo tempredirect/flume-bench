@@ -13,7 +13,13 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException
 import net.sourceforge.argparse4j.inf.ArgumentType
 import net.sourceforge.argparse4j.inf.Namespace
 import net.sourceforge.argparse4j.inf.Subparser
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
@@ -21,11 +27,17 @@ import java.util.concurrent.TimeUnit
  */
 class FlumeBench {
 
+  Logger logger = LoggerFactory.getLogger(FlumeBench)
+
   static void main(String[] args) {
 
     BasicConfigurator.configureDefaultContext()
 
-    ServiceLoader<FlumeClient> serviceLoader = ServiceLoader.load(FlumeClient)
+    new FlumeBench().run(args)
+  }
+
+  def run(String [] args) {
+    ServiceLoader<FlumeClientFactory> serviceLoader = ServiceLoader.load(FlumeClientFactory)
 
     ArgumentParser parser = ArgumentParsers.newArgumentParser("flume-bench")
 
@@ -52,13 +64,19 @@ class FlumeBench {
         .setDefault("command", "max-throughput")
         .help("run at the max possible event")
 
+    maxThroughput.addArgument("--concurrency")
+        .type(Integer)
+        .setDefault(1)
+        .help("number of threads attempting write to each client")
+
     Namespace ns = parser.parseArgsOrFail(args)
 
-    FlumeClient client = serviceLoader.iterator().find { it.name == ns.getString("client") } as FlumeClient
-    client.initialise(ns.get("host") as HostAndPort, [:])
+    FlumeClientFactory clientFactory = serviceLoader.iterator()
+        .find { it.name == ns.getString("client") } as FlumeClientFactory
+
+    clientFactory.configure([:])
 
     MetricRegistry metrics = new MetricRegistry()
-    MetricRecordingClient metricRecordingClient = new MetricRecordingClient(client, metrics)
 
     ConsoleReporter reporter = ConsoleReporter.forRegistry(metrics)
         .convertRatesTo(TimeUnit.SECONDS)
@@ -66,20 +84,55 @@ class FlumeBench {
 
     reporter.start(5, TimeUnit.SECONDS)
 
+    MetricRecordingClientFactory metricRecordingClientFactory = new MetricRecordingClientFactory(clientFactory, metrics)
+
+    ExecutorService executorService = Executors.newCachedThreadPool()
+
+    Throwable lastError = null
     switch(ns.getString("command")) {
       case "max-throughput":
-        new MaxThroughput(
-            source: new EventSource(),
-            client: metricRecordingClient,
-            duration: ns.get("duration"),
-            metrics: metrics
-        ).run()
+        def concurrency = ns.getInt("concurrency")
+        def tasks = (1..concurrency).collect {
+          def client = metricRecordingClientFactory.create()
+          client.initialise(ns.get("host") as HostAndPort)
+          new MaxThroughput(
+              source: new EventSource(),
+              client: client,
+              duration: ns.get("duration"),
+              metrics: metrics
+          )
+        }
+        def futures = executorService.invokeAll(tasks.collect(this.&toCallable))
+
+        // report any errors
+        futures.each { f ->
+          try {
+            f.get()
+          } catch (ExecutionException e) {
+            logger.error("task failed: ${e}")
+            lastError = e
+          }
+        }
         break
     }
 
     reporter.stop()
 
     reporter.report()
+    if (lastError) {
+      logger.error("Run ended in failure lastError: $lastError")
+      System.exit(1)
+    }
+  }
+
+  private static Callable toCallable(Runnable runnable) {
+    new Callable() {
+      @Override
+      Object call() throws Exception {
+        runnable.run()
+        null
+      }
+    }
   }
 
   private static ArgumentType<Duration> durationType() {

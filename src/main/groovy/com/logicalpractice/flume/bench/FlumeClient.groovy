@@ -10,7 +10,6 @@ interface FlumeClient {
 
   void send(List<Event> events)
 
-  void initialise(HostAndPort hostAndPort, Map<String,String> parameter)
+  void initialise(HostAndPort hostAndPort)
 
-  String getName()
 }

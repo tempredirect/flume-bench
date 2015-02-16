@@ -1,0 +1,5 @@
+com.logicalpractice.flume.bench.clients.AvroClientFactory
+com.logicalpractice.flume.bench.clients.ThriftClientFactory
+com.logicalpractice.flume.bench.clients.HttpUrlConnectionClientFactory
+com.logicalpractice.flume.bench.clients.LoggerClientFactory
+com.logicalpractice.flume.bench.clients.NullClientFactory

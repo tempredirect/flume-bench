@@ -26,3 +26,27 @@ tasks.withType(GroovyCompile) {
   groovyOptions.optimizationOptions.indy = true
 }
 
+
+task downloadFlume(type:Copy) {
+  def filename = "apache-flume-${flumeVersion}-bin.tar.gz"
+
+  from tarTree("$buildDir/$filename")
+  into "$buildDir/flume"
+
+  doFirst {
+    def location = "flume/${flumeVersion}/${filename}"
+    def urls = [
+        "http://mirror.catn.com/pub/apache/$location",
+        "http://mirrors.ukfast.co.uk/sites/ftp.apache.org/$location",
+        "http://mirror.ox.ac.uk/sites/rsync.apache.org/$location",
+        "http://apache.mirror.anlx.net/$location",
+        "http://mirror.vorboss.net/apache/$location",
+        "http://mirror.gopotato.co.uk/apache/$location",
+        "http://www.mirrorservice.org/sites/ftp.apache.org/$location"
+    ]
+    Collections.shuffle(urls)
+    logger.lifecycle("downloading: ${urls.first()}")
+    ant.get(src: urls.first(), dest: buildDir)
+  }
+}
+

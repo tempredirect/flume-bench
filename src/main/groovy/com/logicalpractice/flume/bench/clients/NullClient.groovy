@@ -14,12 +14,7 @@ class NullClient implements FlumeClient {
   }
 
   @Override
-  void initialise(HostAndPort hostAndPort, Map<String, String> parameter) {
+  void initialise(HostAndPort hostAndPort) {
 
-  }
-
-  @Override
-  String getName() {
-    "null"
   }
 }

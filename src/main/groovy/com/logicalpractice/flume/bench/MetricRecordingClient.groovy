@@ -27,12 +27,7 @@ class MetricRecordingClient implements FlumeClient {
   }
 
   @Override
-  void initialise(HostAndPort hostAndPort, Map<String, String> parameter) {
-    client.initialise(hostAndPort, parameter)
-  }
-
-  @Override
-  String getName() {
-    return "notVisible"
+  void initialise(HostAndPort hostAndPort) {
+    client.initialise(hostAndPort)
   }
 }

@@ -9,22 +9,11 @@ import org.apache.flume.api.RpcClientFactory
 /**
  *
  */
-class AvroClient implements FlumeClient {
-
-  RpcClient rpcClient
+class AvroClient extends AbstractRpcClient implements FlumeClient {
 
   @Override
-  void send(List<Event> events) {
-    rpcClient.appendBatch(events)
-  }
-
-  @Override
-  void initialise(HostAndPort hostAndPort, Map<String, String> parameter) {
+  void initialise(HostAndPort hostAndPort) {
     rpcClient = RpcClientFactory.getDefaultInstance(hostAndPort.getHostText(), hostAndPort.getPort())
   }
 
-  @Override
-  String getName() {
-    return "avro"
-  }
 }
